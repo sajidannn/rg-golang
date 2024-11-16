@@ -106,9 +106,9 @@ func (sm *InMemoryStudentManager) GetStudyProgram(code string) (string, error) {
 }
 
 func (sm *InMemoryStudentManager) ModifyStudent(name string, fn model.StudentModifier) (string, error) {
-	for _, student := range sm.students{
-		if student.Name == name {
-			if err := fn(&student); err != nil {	
+	for i := range sm.students{
+		if sm.students[i].Name == name {
+			if err := fn(&sm.students[i]); err != nil {	
 				return "", err
 			}
 			return "Program studi mahasiswa berhasil diubah.", nil
