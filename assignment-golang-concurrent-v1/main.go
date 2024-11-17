@@ -122,46 +122,26 @@ func (sm *InMemoryStudentManager) RegisterLongProcess() {
 }
 
 func (sm *InMemoryStudentManager) Register(id string, name string, studyProgram string) (string, error) {
-	resultChan := make(chan string)
-	errChan := make(chan error)
-
-	go func() {
-		// 30ms delay to simulate slow processing. DO NOT REMOVE THIS LINE
-		sm.RegisterLongProcess()
-	}()
-
-	go func() {
-		// Below lock is needed to prevent data race error. DO NOT REMOVE BELOW 2 LINES
-		sm.Lock()
-		defer sm.Unlock()
-		if id == "" || name == "" || studyProgram == "" {
-			errChan <- fmt.Errorf("ID, Name or StudyProgram is undefined!")
-			return
-		}
-		if _, existsStudy := sm.studentStudyPrograms[studyProgram]; !existsStudy {
-			errChan <- fmt.Errorf("Study program %s is not found", studyProgram)
-			return
-		}
-		for _, student := range sm.students {
-			if student.ID == id {
-				errChan <- fmt.Errorf("Registrasi gagal: id sudah digunakan")
-				return
-			}
-		}
-		sm.students = append(sm.students, model.Student{
-			ID: id,
-			Name: name,
-			StudyProgram: studyProgram,
-		})
-		resultChan <- fmt.Sprintf("Registrasi berhasil: %s (%s)", name, studyProgram)
-	}()
-
-	select {
-	case result := <-resultChan:
-		return result, nil
-	case err := <-errChan:
-		return "", err
+	sm.RegisterLongProcess()
+	sm.Lock()
+	defer sm.Unlock()
+	if id == "" || name == "" || studyProgram == "" {
+		return "", fmt.Errorf("ID, Name or StudyProgram is undefined!")
 	}
+	if _, existsStudy := sm.studentStudyPrograms[studyProgram]; !existsStudy {
+		return "", fmt.Errorf("Study program %s is not found", studyProgram)
+	}
+	for _, student := range sm.students {
+		if student.ID == id {
+			return "", fmt.Errorf("Registrasi gagal: id sudah digunakan")
+		}
+	}
+	sm.students = append(sm.students, model.Student{
+		ID: id,
+		Name: name,
+		StudyProgram: studyProgram,
+	})
+	return fmt.Sprintf("Registrasi berhasil: %s (%s)", name, studyProgram) , nil
 }
 
 func (sm *InMemoryStudentManager) GetStudyProgram(code string) (string, error) {
@@ -199,37 +179,25 @@ func (sm *InMemoryStudentManager) ChangeStudyProgram(programStudi string) model.
 
 func (sm *InMemoryStudentManager) ImportStudents(filenames []string) error {
 	var wg sync.WaitGroup
-	studentChan := make(chan []model.Student)
-	errChan := make(chan error)
+	var students []model.Student
 
 	for _, filename := range filenames {
+		student, err := ReadStudentsFromCSV(filename)
+		if err != nil {
+			return err
+		}
+		students = append(students, student...)
+	}
+
+	for _, student := range students {
 		wg.Add(1)
-		go func(filename string) {
+		go func(student model.Student) {
 			defer wg.Done()
-			students, err := ReadStudentsFromCSV(filename)
-			if err != nil {
-				errChan <- err
-				return
-			}
-			studentChan <- students
-		}(filename)
+			sm.Register(student.ID, student.Name, student.StudyProgram)
+		}(student)
 	}
 
-	go func () {
-		wg.Wait()
-		close(studentChan)
-		close(errChan)
-	}()
-
-	for students := range studentChan {
-		sm.Lock()
-		sm.students = append(sm.students, students...)
-		sm.Unlock()
-	}
-
-	if err := <-errChan; err != nil {
-		return err
-	}
+	wg.Wait()
 	return nil
 }
 
