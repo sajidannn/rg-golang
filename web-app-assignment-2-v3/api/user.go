@@ -58,13 +58,18 @@ func (u *userAPI) Login(c *gin.Context) {
 		return
 	}
 
+	if(loginReq.Email == "" || loginReq.Password == "") {
+		c.JSON(http.StatusBadRequest, model.NewErrorResponse("invalid decode json"))
+		return
+	}
+
 	token, err := u.userService.Login(&loginReq)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.SetCookie("token", *token, 3600, "/", "localhost", false, true)
+	c.SetCookie("session_token", *token, 3600, "/", "localhost", false, true)
 
 	c.JSON(http.StatusOK, model.NewSuccessResponse("login success"))
 }

@@ -10,16 +10,16 @@ import (
 
 func Auth() gin.HandlerFunc {
 	return gin.HandlerFunc(func(ctx *gin.Context) {
-		cookie, err := ctx.Cookie("token")
+		cookie, err := ctx.Cookie("session_token")
 		if err != nil {
-			if err == http.ErrNoCookie {
-				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			if ctx.ContentType() == "application/json" {
+				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorize"})
 				ctx.Abort()
 				return
 			}
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": "bad request"})
-			ctx.Abort()
-			return
+		ctx.Redirect(http.StatusSeeOther, "/user/login")
+		ctx.Abort()
+		return
 		}
 
 		tknStr := cookie
@@ -47,7 +47,7 @@ func Auth() gin.HandlerFunc {
 			return
 		}
 
-		ctx.Set("userID", claims.UserID)
+		ctx.Set("id", claims.UserID)
 		ctx.Next()
 	})
 }

@@ -58,7 +58,6 @@ func (s *userService) Login(user *model.User) (token *string, err error) {
 	}
 
 	expirationTime := time.Now().Add(24 * time.Hour)
-	// pake pointer atau tidak? &
 	claims := &model.Claims{
 		UserID: dbUser.ID,
 		StandardClaims: jwt.StandardClaims{

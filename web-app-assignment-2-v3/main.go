@@ -113,6 +113,7 @@ func RunServer(gin *gin.Engine, filebasedDb *filebased.Data) *gin.Engine {
 		category.Use(middleware.Auth())
 		category.POST("/add", apiHandler.CategoryAPIHandler.AddCategory)
 		category.GET("/get/:id", apiHandler.CategoryAPIHandler.GetCategoryByID)
+		category.PUT("/update/:id", apiHandler.CategoryAPIHandler.UpdateCategory)
 		category.DELETE("/delete/:id", apiHandler.CategoryAPIHandler.DeleteCategory)
 		category.GET("/list", apiHandler.CategoryAPIHandler.GetCategoryList)
 	}
